@@ -1,6 +1,6 @@
 // Your own data files: OHLCV bars from a CSV (chart and backtest them on any longer timeframe) and a
 // position signal (+1/0/-1) that the strategy tester and quant checks run exactly as written.
-// From a Skool comment: 1-minute bars exported from Alpaca, and a strategy written elsewhere.
+// The common case: 1-minute bars exported from Alpaca, and a strategy written elsewhere.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";

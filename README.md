@@ -6,12 +6,12 @@ It's one small Node.js app with no dependencies. Your watchlists, drawings, aler
 
 ## Install
 
-**With an AI coding agent (easiest).** Paste the setup prompt into Claude Code or Codex. It checks your machine, installs this, tests it, opens it in your browser and sets up your watchlist. It takes a couple of minutes.
+**With an AI coding agent (easiest).** Paste the setup prompt in [INSTALL-PROMPT.md](INSTALL-PROMPT.md) into Claude Code or Codex. It checks your machine, installs this, tests it, opens it in your browser and sets up your watchlist. It takes a couple of minutes.
 
 **By hand.**
 
 1. Install Node.js 18 or newer from [nodejs.org](https://nodejs.org) (the LTS version is fine).
-2. Download [quant-terminal.zip](https://part-timequant.com/kit/quant-terminal.zip) from part-timequant.com, the only official source, and unzip it. To check it's the real file, run `shasum -a 256 quant-terminal.zip` and compare it with [quant-terminal-sha256.txt](https://part-timequant.com/kit/quant-terminal-sha256.txt).
+2. Download [main.zip](https://github.com/HandsomeWJ/quant-terminal/archive/refs/heads/main.zip) and unzip it. The folder inside is `quant-terminal-main`; rename it to `quant-terminal`. Or clone it: `git clone https://github.com/HandsomeWJ/quant-terminal.git`.
 3. In that folder, run:
 
 ```bash
@@ -23,6 +23,8 @@ npm start
 ```
 
 There's no `npm install` step. Next time, double-click `start.command` (Mac), `start.bat` (Windows) or run `./start.sh` (Linux).
+
+**Update.** Paste the setup prompt again, or by hand: stop it with `node scripts/stop.js`, download `main.zip` again and copy its files over your `quant-terminal` folder. The download has no `data` folder, so your watchlists, drawings, alerts and paper account stay as they are.
 
 ## What's in it
 
@@ -149,17 +151,7 @@ python3 examples/python/quant_terminal.py
 cd examples/rust && cargo run --release
 ```
 
-Add `--listen` to either one to print alerts as they fire. Trading real money happens in PTQ (below).
-
-## Works with PTQ
-
-If you run [PTQ](https://www.part-timequant.com/) on the same computer (`ptq serve`), Quant Terminal finds it automatically:
-
-- **Check with PTQ** appears under every strategy tester result. It sends the rules to PTQ, which backtests them on its own engine and checks whether the result was luck: walk-forward, overfitting (PBO), deflated Sharpe and higher costs. The strategy is saved in your PTQ.
-- **The PTQ tab** shows your PTQ account, positions, armed strategies and recent orders, with a button that stops all PTQ trading.
-- **Trading it** happens in PTQ. Connect your account in PTQ, then arm the strategy on the command line (`ptq arm-strategy <id> --max-notional 100`). PTQ shows what you're agreeing to before anything trades.
-
-Quant Terminal never sees your PTQ licence key or your exchange keys, never places an order and never arms a strategy. It can only make PTQ do less: engage its stop, or disarm a strategy. It reads the lease `ptq activate` saved on this computer and talks to PTQ on `127.0.0.1:8787` (set `PTQ_URL` to change that). PTQ's builder takes SMA, EMA, RSI, ATR, ROC, standard deviation, Bollinger Bands, MACD, Donchian highs and lows and volume; anything else is refused with the reason rather than approximated.
+Add `--listen` to either one to print alerts as they fire.
 
 ## Commands
 
@@ -170,7 +162,6 @@ Quant Terminal never sees your PTQ licence key or your exchange keys, never plac
 | `npm run doctor` | Check Node and which data sources you can reach |
 | `npm test` | Offline tests (indicators, backtester, server) |
 | `npm run smoke` | Start the server and check it serves live data |
-| `PTQ_URL=http://127.0.0.1:8787 npm start` | Point the PTQ connector somewhere else |
 | `npm run compare -- BTCUSDT 1D 2026-10-10` | Print indicator values for one bar, to check against another charting tool |
 
 `PORT=4000 npm start` picks a port. `HOST=0.0.0.0 npm start` lets a phone on your home network open it (only do that on a network you trust).
@@ -184,6 +175,6 @@ Quant Terminal never sees your PTQ licence key or your exchange keys, never plac
 
 ## Licence and credits
 
-MIT for this project's code. The chart engine is TradingView's open-source [Lightweight Charts](https://github.com/tradingview/lightweight-charts) (Apache 2.0), and the chart keeps TradingView's attribution logo as its licence asks. Quant Terminal isn't affiliated with or endorsed by TradingView, Inc. See `NOTICE`.
+MIT for this project's code (copyright Lewis Jackson, see `LICENSE`). This repo is a fork of Quant Terminal 1.0.0 with the links to the author's websites, the in-app course banner and the connector for the author's separate trading product removed. The chart engine is TradingView's open-source [Lightweight Charts](https://github.com/tradingview/lightweight-charts) (Apache 2.0), and the chart keeps TradingView's attribution logo as its licence asks. Quant Terminal isn't affiliated with or endorsed by TradingView, Inc. See `NOTICE`.
 
 Nothing here is financial advice.

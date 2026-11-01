@@ -8,7 +8,6 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232962ff'/%3E%3Cpath d='M7 21l6-7 5 4 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&display=swap" />
     <link rel="stylesheet" href="/css/app.css" />
   </head>
   <body>
@@ -80,10 +79,10 @@
       <div class="spacer"></div>
       <a
         class="tb"
-        href="https://part-timequant.com/tradingview/help"
+        href="https://github.com/HandsomeWJ/quant-terminal#readme"
         target="_blank"
         rel="noopener"
-        title="What's new, how to update, and common questions"
+        title="How to use and update it (README on GitHub)"
         >Help</a
       >
       <button id="logBtn" class="tb" title="Logarithmic price scale">
@@ -110,14 +109,7 @@
       <span id="status" class="status" title="Data status"></span>
     </header>
 
-    <div id="ribbon" class="ribbon hidden">
-    <span class="ribbon-badge">Part-Time Quant Academy</span>
-    <span><b>$500 monthly strategy competition.</b> Scored on simulated money, plus live calls, support and a trading buddy.</span>
-    <a class="ribbon-cta" href="https://www.skool.com/part-time-quant-academy/about" target="_blank" rel="noopener">Join the Academy for $29/month &#8599;</a>
-    <a class="ribbon-terms" href="https://www.part-timequant.com/competition-terms" target="_blank" rel="noopener">Rules</a>
-    <button class="ribbon-x" title="Hide for a week" aria-label="Hide">&times;</button>
-  </div>
-  <div class="main">
+    <div class="main">
       <nav class="drawbar" id="drawbar"></nav>
       <section class="center">
         <div id="grid" class="grid"></div>
@@ -130,7 +122,6 @@
             <button data-tab="financials">Financials</button>
             <button data-tab="paper">Paper trading</button>
             <button data-tab="editor">Indicator editor</button>
-          <button data-tab="ptq">PTQ</button>
             <div class="spacer"></div>
             <button id="bottomToggle" class="icon" title="Show / hide panel">
               <svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6" /></svg>

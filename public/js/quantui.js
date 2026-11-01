@@ -36,7 +36,7 @@ function render(q) {
       : q.passed === 0
         ? "It failed every check. The backtest result is most likely luck or tuned to the past."
         : "Some checks failed. Part of this result may be luck or tuned to the past.";
-  let html = `<div class="ptq-verdict ${cls}">Passed ${q.passed} of ${total} checks</div><p>${verdict}</p>`;
+  let html = `<div class="qc-verdict ${cls}">Passed ${q.passed} of ${total} checks</div><p>${verdict}</p>`;
   html += `<table class="t"><tbody>${q.gates.map((g) => `<tr><td class="l"><b>${esc(g.label)}</b></td><td class="l muted">${esc(g.value)}</td><td class="${g.pass ? "up" : "down"}">${g.pass ? "Pass" : "Fail"}</td></tr>`).join("")}</tbody></table>`;
 
   if (q.walkForward) {

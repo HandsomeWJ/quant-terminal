@@ -81,7 +81,6 @@ class App {
     this.setLayout(this.state.layout, false);
     this.panels = initPanels(this);
     this.bindKeys();
-    this.showRibbon();
     this.listenAlerts();
     this.checkHealth();
     setInterval(() => this.checkHealth(), 60000);
@@ -712,21 +711,6 @@ class App {
     for (const p of this.panes) if (p !== pane && p.replay?.follower) p.stopReplay();
     this.syncToolbar();
     this.panels?.onReplayChange?.();
-  }
-
-  // The Academy ribbon: hidden for a week after it's closed.
-  showRibbon() {
-    const el = $("#ribbon");
-    let hiddenUntil = 0;
-    try { hiddenUntil = Number(localStorage.getItem("qt-ribbon-hidden-until")) || 0; } catch { /* storage off */ }
-    if (Date.now() < hiddenUntil) return;
-    el.classList.remove("hidden");
-    document.body.classList.add("has-ribbon");
-    el.querySelector(".ribbon-x").onclick = () => {
-      el.classList.add("hidden");
-      document.body.classList.remove("has-ribbon");
-      try { localStorage.setItem("qt-ribbon-hidden-until", String(Date.now() + 7 * 86400e3)); } catch { /* storage off */ }
-    };
   }
 
   // ---------- prices, alerts, status ----------

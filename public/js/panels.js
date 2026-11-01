@@ -10,7 +10,6 @@ import {
   exchange,
 } from "./api.js";
 import { INDICATORS, BY_ID, registerIndicator } from "../lib/indicators.js";
-import { mountPtqCheck, renderPtqTab } from "./ptq.js";
 import { renderNews, renderSeasonals, renderFinancials } from "./research.js";
 import { mountQuantChecks } from "./quantui.js";
 import {
@@ -263,7 +262,6 @@ export function initPanels(app) {
         financials: () => renderFinancials(bottom, app),
         paper: renderPaper,
         editor: renderEditor,
-        ptq: () => renderPtqTab(bottom, app),
       })[bottomTab]();
   };
 
@@ -806,7 +804,6 @@ export function initPanels(app) {
       <div class="stats">${stat("Net profit", pc(s.netProfitPct), s.netProfitPct >= 0 ? "up" : "down")}${stat("Buy and hold", pc(s.buyHoldPct), s.buyHoldPct >= 0 ? "up" : "down")}${stat("Max drawdown", s.maxDrawdownPct == null ? "—" : `-${s.maxDrawdownPct}%`, "down")}${stat("Trades", s.totalTrades)}${stat("Win rate", s.winRatePct == null ? "—" : `${s.winRatePct}%`)}${stat("Profit factor", s.profitFactor)}${stat("Sharpe", s.sharpe)}${stat("Sortino", s.sortino)}${stat("Avg trade", pc(s.avgTradePct))}${stat("Time in market", s.exposurePct == null ? "—" : `${s.exposurePct}%`)}</div>
       <div class="equity" id="tEq"></div>
       <div id="tQuant"></div>
-      <div id="tPtq"></div>
       <table class="t"><thead><tr><th>Side</th><th>Entry</th><th>Exit</th><th>Entry price</th><th>Exit price</th><th>P&amp;L %</th><th>Bars</th><th class="l">Exit reason</th></tr></thead><tbody>${r.trades
         .slice()
         .reverse()
@@ -862,7 +859,6 @@ export function initPanels(app) {
     );
     equityChart.timeScale().fitContent();
     mountQuantChecks($("#tQuant"), r);
-    mountPtqCheck($("#tPtq"), { strategy: r.strat, symbol: r.symbol, tf: r.tf, name: tState.name || `${ticker(r.symbol)} ${r.tf}` });
   }
 
   // ======================= SCREENER =======================

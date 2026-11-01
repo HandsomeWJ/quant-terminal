@@ -86,7 +86,7 @@ test("network failures are upstream errors (the server answers 502)", async () =
 });
 
 test("the chart note for a fallback is plain words: no hostnames or HTTP codes", async () => {
-  // A Skool member saw "Using Kraken (Yahoo: query1.finance.yahoo.com returned HTTP 429)" on a chart and had to ask what it meant.
+  // A user saw "Using Kraken (Yahoo: query1.finance.yahoo.com returned HTTP 429)" on a chart and had to ask what it meant.
   mode = { "api.binance.com": 451, "data-api.binance.vision": 451, "api.binance.us": 451 };
   const r = await P.getCandles("BTCUSDT", "1D", 100);
   const text = r.notes.join(" ");
@@ -126,7 +126,7 @@ test("XAUUSD charts gold, and falls back to PAXG when Yahoo is down", async () =
 });
 
 test("crypto perpetual futures: BTCUSDT.P charts Binance futures, then Bybit where Binance futures is blocked", async () => {
-  // A YouTube comment: "only spot trading is available in the list, and futures are not there".
+  // A user report: "only spot trading is available in the list, and futures are not there".
   for (const [typed, id] of [
     ["BTCUSDT.P", "BINANCE:BTCUSDT.P"],
     ["btc.p", "BINANCE:BTCUSDT.P"],

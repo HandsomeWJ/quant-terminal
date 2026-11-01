@@ -15,7 +15,6 @@ import * as feeds from "./lib/feeds.js";
 import * as imports from "./lib/imports.js";
 import * as alerts from "./lib/alerts.js";
 import * as store from "./lib/store.js";
-import * as ptq from "./lib/ptq.js";
 import * as info from "./lib/market-info.js";
 import { registerIndicator, INDICATORS } from "./public/lib/indicators.js";
 import { conditionFn, backtest, magnifierTf } from "./public/lib/backtest.js";
@@ -476,20 +475,6 @@ async function handle(req, res) {
       setTimeout(() => process.exit(0), 100);
       return;
     }
-    // PTQ connector: reads and fail-safe controls only. There is no route here that arms a
-    // strategy or places an order; that stays inside PTQ (`ptq arm-strategy`).
-    if (p === "/api/ptq/status") return send(res, 200, await ptq.status());
-    if (p === "/api/ptq/overview") return send(res, 200, await ptq.overview());
-    if (p === "/api/ptq/check" && req.method === "POST") {
-      try {
-        return send(res, 200, await ptq.check(await readBody(req)));
-      } catch (e) {
-        return send(res, e.status || 502, { error: e.message, code: e.code, problems: e.problems || [], notes: e.notes || [] });
-      }
-    }
-    if (p === "/api/ptq/kill-switch" && req.method === "POST") return send(res, 200, await ptq.engageKillSwitch());
-    const disarmMatch = /^\/api\/ptq\/arms\/([^/]+)\/disarm$/.exec(p);
-    if (disarmMatch && req.method === "POST") return send(res, 200, await ptq.disarm(decodeURIComponent(disarmMatch[1])));
     return send(res, 404, { error: "Unknown endpoint" });
   } catch (e) {
     // Upstream failures are a bad gateway, whatever status the provider used.

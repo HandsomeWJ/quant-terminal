@@ -9,7 +9,7 @@ Everything the app does goes through a small HTTP API on your own computer, so y
 - **Times** are Unix seconds (UTC). Symbols are `EXCHANGE:TICKER` like the app's search (`BINANCE:BTCUSDT`, `US:AAPL`, `FX:EURUSD`, `CME:NQ1!`), and plain tickers (`btc`, `aapl`) are resolved for you.
 - **Timeframes:** `1m`, `5m`, `15m`, `1h`, `4h`, `1D`, `1W`, `1M`, and custom ones like `7m`, `2h`, `3D`.
 
-The API reads data and runs research. Placing real orders isn't part of it; that's what PTQ is for (see Works with PTQ in the README).
+The API reads data and runs research. Placing real orders isn't part of it.
 
 ## Market data
 

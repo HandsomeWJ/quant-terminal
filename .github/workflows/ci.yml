@@ -20,38 +20,72 @@ jobs:
       - name: Smoke test (real server, real data)
         run: npm run smoke
 
-  # Runs the install prompt's own commands on each OS, without an AI agent, from a downloaded
-  # archive (no git), the way someone without git would get it.
+  # Runs the setup prompt's own commands (INSTALL-PROMPT.md) in every shell it names, without an
+  # AI agent, from a downloaded archive (no git). Each download runs twice, the second time over
+  # a saved data folder, the way an update does. The prompt fetches refs/heads/main; CI fetches
+  # the commit under test with the same commands.
   install:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - { os: windows-latest, shell: powershell }
+          - { os: windows-latest, shell: cmd }
+          - { os: windows-latest, shell: bash }
+          - { os: macos-latest, shell: bash }
+          - { os: ubuntu-latest, shell: bash }
     runs-on: ${{ matrix.os }}
     env:
       QT_NO_OPEN: "1"
-      GH_TOKEN: ${{ github.token }}
+      TARBALL: https://github.com/${{ github.repository }}/archive/${{ github.sha }}.tar.gz
+      ZIPBALL: https://github.com/${{ github.repository }}/archive/${{ github.sha }}.zip
     steps:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Download and unpack (Windows PowerShell 5, as in the prompt)
-        if: runner.os == 'Windows'
+        if: matrix.shell == 'powershell'
         shell: powershell
         run: |
           Set-Location $env:USERPROFILE
-          Invoke-WebRequest -Uri "https://api.github.com/repos/${{ github.repository }}/zipball/${{ github.sha }}" -Headers @{ Authorization = "Bearer $env:GH_TOKEN" } -OutFile "$env:TEMP\quant-terminal.zip"
-          Expand-Archive "$env:TEMP\quant-terminal.zip" -DestinationPath . -Force
-          Get-ChildItem -Directory | Where-Object { $_.Name -like "*quant-terminal-*" } | Select-Object -First 1 | Rename-Item -NewName quant-terminal
-          Test-Path "$env:USERPROFILE\quant-terminal\server.js"
-      - name: Download and unpack (curl and tar, as in the prompt)
-        if: runner.os != 'Windows'
+          New-Item -ItemType Directory -Force quant-terminal | Out-Null
+          curl.exe -fsSL -o "$env:TEMP\quant-terminal.zip" $env:ZIPBALL
+          & "$env:SystemRoot\System32\tar.exe" -xf "$env:TEMP\quant-terminal.zip" --strip-components=1 -C quant-terminal
+          if (-not (Test-Path quant-terminal\server.js)) { exit 1 }
+          New-Item -ItemType Directory -Force quant-terminal\data | Out-Null
+          Set-Content quant-terminal\data\keep.txt saved
+          New-Item -ItemType Directory -Force quant-terminal | Out-Null
+          curl.exe -fsSL -o "$env:TEMP\quant-terminal.zip" $env:ZIPBALL
+          & "$env:SystemRoot\System32\tar.exe" -xf "$env:TEMP\quant-terminal.zip" --strip-components=1 -C quant-terminal
+          if (-not (Test-Path quant-terminal\data\keep.txt)) { exit 1 }
+          Remove-Item -Recurse quant-terminal\data
+      - name: Download and unpack (Windows cmd, as in the prompt)
+        if: matrix.shell == 'cmd'
+        shell: cmd
+        run: |
+          cd /d %USERPROFILE%
+          if not exist quant-terminal mkdir quant-terminal
+          curl.exe -fsSL -o "%TEMP%\quant-terminal.zip" %ZIPBALL%
+          "%SystemRoot%\System32\tar.exe" -xf "%TEMP%\quant-terminal.zip" --strip-components=1 -C quant-terminal
+          if not exist quant-terminal\server.js exit /b 1
+          mkdir quant-terminal\data
+          echo saved> quant-terminal\data\keep.txt
+          if not exist quant-terminal mkdir quant-terminal
+          curl.exe -fsSL -o "%TEMP%\quant-terminal.zip" %ZIPBALL%
+          "%SystemRoot%\System32\tar.exe" -xf "%TEMP%\quant-terminal.zip" --strip-components=1 -C quant-terminal
+          if not exist quant-terminal\data\keep.txt exit /b 1
+          rmdir /s /q quant-terminal\data
+      - name: Download and unpack (macOS, Linux, Git Bash, as in the prompt)
+        if: matrix.shell == 'bash'
         shell: bash
         run: |
           cd ~
-          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/${{ github.repository }}/tarball/${{ github.sha }}" | tar -xz
-          mv *quant-terminal-* quant-terminal
-          test -f ~/quant-terminal/server.js
+          mkdir -p quant-terminal && curl -fsSL -o quant-terminal.tar.gz "$TARBALL" && tar -xzf quant-terminal.tar.gz --strip-components=1 -C quant-terminal && rm quant-terminal.tar.gz
+          test -f quant-terminal/server.js
+          mkdir -p quant-terminal/data && echo saved > quant-terminal/data/keep.txt
+          mkdir -p quant-terminal && curl -fsSL -o quant-terminal.tar.gz "$TARBALL" && tar -xzf quant-terminal.tar.gz --strip-components=1 -C quant-terminal && rm quant-terminal.tar.gz
+          test -f quant-terminal/data/keep.txt
+          rm -rf quant-terminal/data
       - name: Check, set up, launch, stop (Windows)
         if: runner.os == 'Windows'
         shell: powershell
