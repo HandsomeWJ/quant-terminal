@@ -1,5 +1,5 @@
 // One chart: candles + volume + any number of indicators, drawings, compare symbols, replay and live data.
-import { api, fmtPrice, fmtPct, esc, ticker, exchange } from "./api.js";
+import { api, fmtPrice, fmtPct, esc, cssColor, ticker, exchange } from "./api.js";
 import { BY_ID, compute, periodKey } from "../lib/indicators.js";
 import {
   parseTf,
@@ -740,13 +740,13 @@ export class ChartPane {
             .map((o) => {
               const v = res[o.key]?.[i];
               return Number.isFinite(v)
-                ? `<span style="color:${ind.colors?.[o.key] || o.color}">${fmtPrice(v)}</span>`
+                ? `<span style="color:${esc(cssColor(ind.colors?.[o.key], o.color))}">${fmtPrice(v)}</span>`
                 : "";
             })
             .join(" ");
       const short =
         /\(([^)]+)\)$/.exec(def.name)?.[1].split(" / ")[0] || def.name;
-      html += `<div class="row ind" data-uid="${ind.uid}" style="${ind.hidden ? "opacity:.45" : ""}"><span class="name">${esc(short)} ${esc(params)}</span><span class="vals">${vals}</span><span class="acts"><button data-act="settings" title="Settings">${ICON.gear}</button><button data-act="hide" title="Show/hide">${ICON.eye}</button><button data-act="remove" title="Remove">${ICON.x}</button></span></div>`;
+      html += `<div class="row ind" data-uid="${esc(ind.uid)}" style="${ind.hidden ? "opacity:.45" : ""}"><span class="name">${esc(short)} ${esc(params)}</span><span class="vals">${vals}</span><span class="acts"><button data-act="settings" title="Settings">${ICON.gear}</button><button data-act="hide" title="Show/hide">${ICON.eye}</button><button data-act="remove" title="Remove">${ICON.x}</button></span></div>`;
     }
     for (const note of this.notes || [])
       html += `<div class="row note">${esc(note)}</div>`;

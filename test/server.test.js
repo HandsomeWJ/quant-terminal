@@ -25,7 +25,8 @@ test('health and the app page load', async () => {
 
 test('the page says so when the chart library is blocked', async () => {
   const page = await (await fetch(`${base}/`)).text();
-  const script = page.match(/<script>([\s\S]*?LightweightCharts[\s\S]*?)<\/script>/)[1];
+  assert.ok(page.includes('<script src="/js/chart-blocked.js"></script>'));
+  const script = await (await fetch(`${base}/js/chart-blocked.js`)).text();
   const run = (window) => {
     const added = [];
     const document = { createElement: () => ({ style: {} }), body: { appendChild: (el) => added.push(el) } };
@@ -34,6 +35,30 @@ test('the page says so when the chart library is blocked', async () => {
   };
   assert.match(run({})[0].textContent, /ad blocker/);
   assert.equal(run({ LightweightCharts: {} }).length, 0);
+});
+
+test('the page may only run its own script files', async () => {
+  const res = await fetch(`${base}/`);
+  const csp = Object.fromEntries(res.headers.get('content-security-policy').split(';').map((d) => d.trim().split(/\s+/)).map(([k, ...v]) => [k, v]));
+  assert.deepEqual(csp['script-src'], ["'self'"]);
+  assert.deepEqual(csp['object-src'], ["'none'"]);
+  assert.deepEqual(csp['base-uri'], ["'none'"]);
+  assert.deepEqual(csp['frame-ancestors'], ["'none'"]);
+  // An inline script would be blocked by that policy, so every script tag must load a file.
+  assert.equal((await res.text()).match(/<script(?![^>]*\bsrc=)[^>]*>/g), null);
+  assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(res.headers.get('x-frame-options'), 'DENY');
+  assert.equal(res.headers.get('referrer-policy'), 'same-origin');
+  assert.equal((await fetch(`${base}/api/health`)).headers.get('x-content-type-options'), 'nosniff');
+});
+
+test('the page policy allows every live-price websocket the charts open', async () => {
+  const csp = (await fetch(`${base}/`)).headers.get('content-security-policy');
+  const connect = csp.split(';').map((d) => d.trim().split(/\s+/)).find(([k]) => k === 'connect-src').slice(1);
+  const chart = fs.readFileSync(new URL('../public/js/chart.js', import.meta.url), 'utf8');
+  const hosts = [...chart.matchAll(/"(wss:\/\/[^/"]+)\//g)].map((m) => m[1]);
+  assert.ok(hosts.length >= 3);
+  for (const h of hosts) assert.ok(connect.includes(h), `${h} is missing from connect-src`);
 });
 
 test('candles come back sorted with OHLCV', async () => {
@@ -57,6 +82,21 @@ test('alerts can be created, listed and deleted', async () => {
   assert.ok(log.some((e) => e.alertId === a.id), 'the alert fired');
   await fetch(`${base}/api/alerts/${a.id}`, { method: 'DELETE', headers: H });
   assert.equal((await (await fetch(`${base}/api/alerts`)).json()).length, 0);
+});
+
+test('an alert keeps a known trigger, and a patch cannot rewrite what the server owns', async () => {
+  const body = { symbol: 'BINANCE:BTCUSDT', tf: '1D', left: 'close', op: '>', right: 1 };
+  const bad = await fetch(`${base}/api/alerts`, { method: 'POST', headers: H, body: JSON.stringify({ ...body, trigger: '<img src=x onerror=alert(1)>' }) });
+  assert.equal(bad.status, 400);
+  const a = await (await fetch(`${base}/api/alerts`, { method: 'POST', headers: H, body: JSON.stringify(body) })).json();
+  const patched = await (await fetch(`${base}/api/alerts/${a.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ id: 'x', fired: '<b>', createdAt: 'then', active: false }) })).json();
+  assert.equal(patched.id, a.id);
+  assert.equal(patched.fired, 0);
+  assert.equal(patched.createdAt, a.createdAt);
+  assert.equal(patched.active, false);
+  const badTrigger = await fetch(`${base}/api/alerts/${a.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ trigger: 'everyBar' }) });
+  assert.equal(badTrigger.status, 400);
+  await fetch(`${base}/api/alerts/${a.id}`, { method: 'DELETE', headers: H });
 });
 
 test('a malformed custom indicator is refused on save and never replaces a working one', async () => {

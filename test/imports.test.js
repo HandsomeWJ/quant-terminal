@@ -255,3 +255,10 @@ test("an imported signal backtests exactly as written, and the quant checks run 
   assert.equal(bad.status, 400);
   assert.ok(!fs.existsSync(path.join(CUSTOM, "signal-broken.js")));
 });
+
+test("an upload name can't end the signal file's header comment and add code", () => {
+  const s = M.parseSignals(`time,position\n${minute[0].time},1\n`);
+  const src = M.signalIndicatorSource("TEST", s, "a\u2028export default {};\u2029b.csv");
+  assert.ok(!/[\r\u2028\u2029]/.test(src));
+  assert.match(src.split("\n")[0], /^\/\/ Position signal imported from a export default \{\}; b\.csv on /);
+});

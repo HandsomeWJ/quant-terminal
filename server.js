@@ -46,11 +46,27 @@ const MIME = {
 // ---------- helpers ----------
 const httpError = (status, message) => Object.assign(new Error(message), { status });
 
+// The page may run only its own script files, so markup that slips into it can't run code. Inline
+// styles stay allowed because the UI builds style attributes; live crypto prices come over these
+// Binance websockets.
+const PAGE_CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "connect-src 'self' wss://stream.binance.com:9443 wss://data-stream.binance.vision wss://fstream.binance.com",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'",
+].join("; ");
+
 function send(res, status, body, headers = {}) {
   const isStr = typeof body === "string" || Buffer.isBuffer(body);
   res.writeHead(status, {
     "Content-Type": isStr ? "text/plain; charset=utf-8" : "application/json",
     "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
     ...headers,
   });
   res.end(isStr ? body : JSON.stringify(body));
@@ -125,11 +141,14 @@ function serveStatic(res, baseDir, rel) {
   if (!file.startsWith(baseDir + path.sep)) return send(res, 403, "Forbidden");
   fs.stat(file, (err, st) => {
     if (err || !st.isFile()) return send(res, 404, "Not found");
+    const ext = path.extname(file);
     res.writeHead(200, {
-      "Content-Type": MIME[path.extname(file)] || "application/octet-stream",
+      "Content-Type": MIME[ext] || "application/octet-stream",
       "Cache-Control": rel.startsWith("vendor/")
         ? "public, max-age=86400"
         : "no-cache",
+      "X-Content-Type-Options": "nosniff",
+      ...(ext === ".html" ? { "Content-Security-Policy": PAGE_CSP, "X-Frame-Options": "DENY", "Referrer-Policy": "same-origin" } : {}),
     });
     fs.createReadStream(file).pipe(res);
   });
@@ -394,6 +413,7 @@ async function handle(req, res) {
       res.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
+        "X-Content-Type-Options": "nosniff",
         Connection: "keep-alive",
       });
       res.write("retry: 3000\n\n");

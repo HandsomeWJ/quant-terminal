@@ -161,3 +161,10 @@ test("crypto perpetual futures: BTCUSDT.P charts Binance futures, then Bybit whe
     globalThis.fetch = realFetch;
   }
 });
+
+test("news feeds keep only web links, so a feed can't plant a script link", async () => {
+  const { parseRss } = await import("../lib/market-info.js");
+  const item = (link) => `<item><title>Headline</title><link>${link}</link><pubDate>Sun, 01 Nov 2026 10:00:00 GMT</pubDate></item>`;
+  const xml = `<rss>${item("https://example.com/a")}${item("javascript:alert(1)")}${item(" data:text/html,x")}${item("JavaScript:x")}</rss>`;
+  assert.deepEqual(parseRss(xml, "Test").map((n) => n.url), ["https://example.com/a"]);
+});

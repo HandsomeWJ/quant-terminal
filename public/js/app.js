@@ -1,4 +1,4 @@
-import { api, download, esc, ticker, exchange } from "./api.js";
+import { api, download, esc, cssColor, ticker, exchange } from "./api.js";
 import { ChartPane, CHART_TYPES, newUid } from "./chart.js";
 import { TOOLS } from "./drawings.js";
 import {
@@ -535,18 +535,18 @@ class App {
           const local = v ? new Date((v - new Date(v * 1000).getTimezoneOffset() * 60) * 1000).toISOString().slice(0, 16) : "";
           return `<label class="field">${esc(i.label)}<input data-k="${i.key}" data-type="time" type="datetime-local" value="${local}"><button class="btn small" type="button" data-pick="${i.key}">Pick on chart</button></label>`;
         }
-        return `<label class="field">${esc(i.label)}<input data-k="${i.key}" data-type="${i.type}" type="number" step="${i.type === "int" ? 1 : "any"}" value="${v}"></label>`;
+        return `<label class="field">${esc(i.label)}<input data-k="${i.key}" data-type="${i.type}" type="number" step="${i.type === "int" ? 1 : "any"}" value="${esc(v)}"></label>`;
       })
       .join("");
     const colors = def.outputs
       .map(
         (o) =>
-          `<label class="field">${esc(o.label)}<input data-c="${o.key}" type="color" value="${(ind.colors?.[o.key] || o.color).slice(0, 7)}"></label>`,
+          `<label class="field">${esc(o.label)}<input data-c="${o.key}" type="color" value="${esc(cssColor(ind.colors?.[o.key], o.color).slice(0, 7))}"></label>`,
       )
       .join("");
     const card = this.modal(
       def.name,
-      `<div class="form-grid">${fields || '<span class="hint-text">No inputs.</span>'}<label class="field">Timeframe<select data-tf>${["", "5m", "15m", "1h", "4h", "1D", "1W", "1M"].map((t) => `<option value="${t}" ${(ind.tf || "") === t ? "selected" : ""}>${t || `Same as chart (${pane.cfg.tf})`}</option>`).join("")}</select></label></div><p class="hint-text">A higher timeframe shows its value once each of its bars has closed, so history never peeks ahead.</p>${colors ? `<h4>Colours</h4><div class="form-grid">${colors}</div>` : ""}`,
+      `<div class="form-grid">${fields || '<span class="hint-text">No inputs.</span>'}<label class="field">Timeframe<select data-tf>${["", "5m", "15m", "1h", "4h", "1D", "1W", "1M"].map((t) => `<option value="${t}" ${(ind.tf || "") === t ? "selected" : ""}>${t || `Same as chart (${esc(pane.cfg.tf)})`}</option>`).join("")}</select></label></div><p class="hint-text">A higher timeframe shows its value once each of its bars has closed, so history never peeks ahead.</p>${colors ? `<h4>Colours</h4><div class="form-grid">${colors}</div>` : ""}`,
       {
         foot: '<button class="btn" data-reset>Defaults</button><button class="btn primary" data-ok>Apply</button>',
       },
@@ -592,7 +592,7 @@ class App {
     const card = this.modal(
       "Settings",
       `<div class="form-grid">
-      <label class="field">Bars to load per chart<input id="sBars" type="number" min="200" max="20000" step="100" value="${s.bars}"></label>
+      <label class="field">Bars to load per chart<input id="sBars" type="number" min="200" max="20000" step="100" value="${esc(s.bars)}"></label>
       <label class="field">Time axis<select id="sUtc"><option value="0" ${!s.utc ? "selected" : ""}>My local time</option><option value="1" ${s.utc ? "selected" : ""}>UTC</option></select></label>
       <label class="field">Volume on the price chart<select id="sVol"><option value="1" ${s.volume ? "selected" : ""}>Show</option><option value="0" ${!s.volume ? "selected" : ""}>Hide</option></select></label>
       <label class="field">After placing a drawing<select id="sStay"><option value="0" ${!s.stayInDrawMode ? "selected" : ""}>Back to cursor</option><option value="1" ${s.stayInDrawMode ? "selected" : ""}>Keep the tool</option></select></label>
@@ -723,7 +723,7 @@ class App {
     const es = new EventSource("/api/events");
     es.addEventListener("alert", (m) => {
       const e = JSON.parse(m.data);
-      this.toast(`<b>Alert</b><br>${esc(e.text)}`, "alert", 12000);
+      this.toast(e.text, "alert", 12000, "Alert");
       this.beep();
       if ("Notification" in window && Notification.permission === "granted")
         new Notification("Quant Terminal alert", { body: e.text });
@@ -772,10 +772,12 @@ class App {
     if (title) el.title = title;
   }
 
-  toast(html, kind = "", ms = 3500) {
+  // Messages carry file names, symbols, saved names and server errors, so they go in as text, never HTML.
+  toast(text, kind = "", ms = 3500, title = "") {
     const el = document.createElement("div");
     el.className = `toast ${kind}`;
-    el.innerHTML = html;
+    if (title) el.append(Object.assign(document.createElement("b"), { textContent: title }), document.createElement("br"));
+    el.append(String(text));
     $("#toasts").appendChild(el);
     setTimeout(() => el.remove(), ms);
   }

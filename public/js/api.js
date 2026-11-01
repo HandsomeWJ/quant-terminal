@@ -74,6 +74,9 @@ export const fmtPct = (v) =>
   v == null || !Number.isFinite(v)
     ? "—"
     : `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+// A colour read from saved state goes into a style attribute: only colour syntax, nothing that can close it.
+export const cssColor = (c, fallback) =>
+  typeof c === "string" && /^(#[0-9a-f]{3,8}|(rgb|hsl)a?\([\d\s.,%/]+\)|[a-z]+)$/i.test(c) ? c : fallback;
 export const esc = (s) =>
   String(s ?? "").replace(
     /[&<>"']/g,

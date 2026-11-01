@@ -54,6 +54,9 @@ const outputsOf = (def) => [
 const mainInput = (def) =>
   (def.inputs || []).find((i) => i.type === "int" || i.type === "float");
 
+// Strategy JSON can be pasted or loaded from saved state, so fields the form shows as numbers are forced to numbers.
+const asNum = (v, d = 0) => (v !== null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : d);
+
 function operandHtml(o) {
   const val =
     o.kind === "line"
@@ -76,12 +79,12 @@ function operandHtml(o) {
   ].join("");
   let extra = "";
   if (o.kind === "value")
-    extra = `<input class="num" data-v type="number" step="any" value="${o.v ?? 0}">`;
+    extra = `<input class="num" data-v type="number" step="any" value="${asNum(o.v)}">`;
   if (o.kind === "ind") {
     const def = BY_ID[o.id];
     const mi = def && mainInput(def);
     if (mi)
-      extra += `<input class="num" data-p="${mi.key}" type="number" step="any" title="${esc(mi.label)}" value="${o.params?.[mi.key] ?? mi.default}">`;
+      extra += `<input class="num" data-p="${esc(mi.key)}" type="number" step="any" title="${esc(mi.label)}" value="${esc(asNum(o.params?.[mi.key], mi.default))}">`;
     const outs = def ? outputsOf(def) : [];
     if (outs.length > 1)
       extra += `<select data-out>${outs.map((k) => `<option ${k === o.output ? "selected" : ""}>${k}</option>`).join("")}</select>`;
@@ -381,7 +384,7 @@ export function initPanels(app) {
       list
         .map(
           (a) =>
-            `<div class="card" data-id="${a.id}"><div class="top"><div><b>${a.watchlist ? `Watchlist: ${esc(a.watchlist)}` : esc(ticker(a.symbol))}</b> <span class="muted">${esc(a.tf)}</span><div>${esc(describeAlert(a))}</div><div class="sub">${a.active ? "Active" : "Stopped"} · ${{ once: "only once", oncePerBar: "once per bar", oncePerBarClose: "once per bar close" }[a.trigger] || a.trigger}${a.webhook ? " · webhook" : ""}${a.fired ? ` · fired ${a.fired}x` : ""}</div></div><div class="row-flex" style="flex-wrap:nowrap"><button class="btn small" data-act="toggle">${a.active ? "Stop" : "Restart"}</button><button class="btn small danger" data-act="del">Delete</button></div></div></div>`,
+            `<div class="card" data-id="${esc(a.id)}"><div class="top"><div><b>${a.watchlist ? `Watchlist: ${esc(a.watchlist)}` : esc(ticker(a.symbol))}</b> <span class="muted">${esc(a.tf)}</span><div>${esc(describeAlert(a))}</div><div class="sub">${a.active ? "Active" : "Stopped"} · ${esc({ once: "only once", oncePerBar: "once per bar", oncePerBarClose: "once per bar close" }[a.trigger] || a.trigger)}${a.webhook ? " · webhook" : ""}${a.fired ? ` · fired ${esc(a.fired)}x` : ""}</div></div><div class="row-flex" style="flex-wrap:nowrap"><button class="btn small" data-act="toggle">${a.active ? "Stop" : "Restart"}</button><button class="btn small danger" data-act="del">Delete</button></div></div></div>`,
         )
         .join("") ||
       '<div class="pad hint-text">No alerts yet. They run inside the app, so they keep firing with this tab closed as long as the app is running.</div>';
@@ -398,13 +401,17 @@ export function initPanels(app) {
       if (!btn) return;
       const id = btn.closest("[data-id]").dataset.id;
       const a = list.find((x) => x.id === id);
-      if (btn.dataset.act === "del") await api.del(`/api/alerts/${id}`);
-      if (btn.dataset.act === "toggle")
-        await api.patch(`/api/alerts/${id}`, {
-          active: !a.active,
-          lastBar: null,
-          lastBars: {},
-        });
+      try {
+        if (btn.dataset.act === "del") await api.del(`/api/alerts/${encodeURIComponent(id)}`);
+        if (btn.dataset.act === "toggle")
+          await api.patch(`/api/alerts/${encodeURIComponent(id)}`, {
+            active: !a.active,
+            lastBar: null,
+            lastBars: {},
+          });
+      } catch (err) {
+        app.toast(err.message, "err");
+      }
       renderAlerts();
     };
   }
@@ -578,8 +585,14 @@ export function initPanels(app) {
       exitShort: g("exitShort"),
     };
     for (const k of ["stopLossPct", "takeProfitPct", "trailingStopPct", "maxBarsInTrade"])
-      tState.settings[k] = s[k] || 0;
+      tState.settings[k] = asNum(s[k]);
     tState.settings.exitMatch = s.exitMatch === "any" ? "any" : "all";
+  }
+  // Starting capital, sizing, costs and fills, from an example, saved or pasted strategy.
+  function moneyToUi(s) {
+    for (const k of ["initialCapital", "positionPct", "feePct", "slippagePct", "spreadPct"])
+      if (s[k] != null) tState.settings[k] = asNum(s[k], tState.settings[k]);
+    if (s.intrabar != null) tState.settings.intrabar = s.intrabar;
   }
   if (!tState.groups) strategyToUi(EXAMPLE_STRATEGIES["EMA cross (9/21)"]);
 
@@ -599,7 +612,7 @@ export function initPanels(app) {
     const group = (k, title) =>
       `<h4>${title}</h4><div class="rules" data-g="${k}">${(tState.groups[k] || []).map(ruleHtml).join("")}</div><button class="btn small" data-add="${k}">+ Condition</button>`;
     const num = (k, label, step = "any") =>
-      `<label class="field">${label}<input data-s="${k}" type="number" step="${step}" value="${tState.settings[k]}"></label>`;
+      `<label class="field">${label}<input data-s="${k}" type="number" step="${step}" value="${esc(tState.settings[k])}"></label>`;
     const saved = Object.keys(app.state.strategies || {});
     bottom.innerHTML = `<div class="tester"><div class="left">
       <div class="row-flex"><select class="in" id="tPreset"><option value="">Load a strategy…</option><optgroup label="Examples">${Object.keys(
@@ -642,15 +655,7 @@ export function initPanels(app) {
         : app.state.strategies[v.slice(3)];
       strategyToUi(s);
       tState.name = v.slice(3);
-      for (const k of [
-        "initialCapital",
-        "positionPct",
-        "feePct",
-        "slippagePct",
-        "spreadPct",
-        "intrabar",
-      ])
-        if (s[k] != null) tState.settings[k] = s[k];
+      moneyToUi(s);
       renderTester();
     };
     $("#tRun").onclick = runTester;
@@ -723,15 +728,7 @@ export function initPanels(app) {
         try {
           const s = JSON.parse(card.querySelector("#tJ").value);
           strategyToUi(s);
-          for (const k of [
-            "initialCapital",
-            "positionPct",
-            "feePct",
-            "slippagePct",
-            "spreadPct",
-            "intrabar",
-          ])
-            if (s[k] != null) tState.settings[k] = s[k];
+          moneyToUi(s);
           app.closeModal();
           renderTester();
         } catch (e) {
@@ -810,7 +807,7 @@ export function initPanels(app) {
         .slice(0, 300)
         .map(
           (t) =>
-            `<tr data-t="${t.entryTime}"><td>${t.side}</td><td>${new Date(t.entryTime * 1000).toLocaleString()}</td><td>${new Date(t.exitTime * 1000).toLocaleString()}</td><td>${fmtPrice(t.entryPrice)}</td><td>${fmtPrice(t.exitPrice)}</td><td class="${t.pnl >= 0 ? "up" : "down"}">${t.pnlPct.toFixed(2)}%</td><td>${t.bars}</td><td class="l">${esc(t.exitReason)}</td></tr>`,
+            `<tr data-t="${esc(t.entryTime)}"><td>${t.side}</td><td>${new Date(t.entryTime * 1000).toLocaleString()}</td><td>${new Date(t.exitTime * 1000).toLocaleString()}</td><td>${fmtPrice(t.entryPrice)}</td><td>${fmtPrice(t.exitPrice)}</td><td class="${t.pnl >= 0 ? "up" : "down"}">${t.pnlPct.toFixed(2)}%</td><td>${t.bars}</td><td class="l">${esc(t.exitReason)}</td></tr>`,
         )
         .join("")}</tbody></table>`;
     $("#tCsv").onclick = () =>
@@ -1372,16 +1369,16 @@ export function initPanels(app) {
       <div class="row-flex"><label class="field">Type<select id="ppType"><option value="market">Market</option><option value="limit">Limit</option><option value="stop">Stop</option></select></label><label class="field">Price<input id="ppPrice" type="number" step="any" value="${px ? Number(px.toPrecision(6)) : ""}" style="width:110px"></label><label class="field">Amount ($)<input id="ppAmt" type="number" step="any" value="1000" style="width:100px"></label></div>
       <div class="row-flex" style="margin-top:6px"><label class="field">Stop loss % (optional)<input id="ppSl" type="number" step="any" style="width:90px"></label><label class="field">Take profit % (optional)<input id="ppTp" type="number" step="any" style="width:90px"></label></div>
       <div class="row-flex" style="margin-top:10px"><button class="btn primary" id="ppBuy" style="background:var(--up);border-color:var(--up)">Buy</button><button class="btn primary" id="ppSell" style="background:var(--down);border-color:var(--down)">Sell / short</button></div>
-      <h4>Account</h4><div class="row-flex"><label class="field">Starting balance<input id="ppInit" type="number" value="${p.initial}" style="width:110px"></label><label class="field">Fee % per trade<input id="ppFee" type="number" step="any" value="${p.feePct}" style="width:80px"></label><button class="btn danger" id="ppReset" style="align-self:end">Reset account</button></div>
+      <h4>Account</h4><div class="row-flex"><label class="field">Starting balance<input id="ppInit" type="number" value="${esc(p.initial)}" style="width:110px"></label><label class="field">Fee % per trade<input id="ppFee" type="number" step="any" value="${esc(p.feePct)}" style="width:80px"></label><button class="btn danger" id="ppReset" style="align-self:end">Reset account</button></div>
       <p class="hint-text">${replayPane() ? `<b>Replay trading.</b> Orders fill at the replayed bars' prices in a separate practice account. Step or play the replay to fill limit and stop orders. Exit replay to go back to your live paper account.` : "Simulated fills at the live price. No real money, no exchange connection."}</p>
     </div><div class="right"><div class="stats" id="ppEq"></div>
       <h4>Positions</h4><table class="t"><thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Avg price</th><th>Last</th><th>P&amp;L</th><th></th></tr></thead><tbody id="ppPos"></tbody></table>
-      <h4>Working orders</h4><table class="t"><thead><tr><th>Symbol</th><th>Side</th><th>Type</th><th>Price</th><th>Qty</th><th></th></tr></thead><tbody>${p.orders.map((o) => `<tr><td><b>${esc(ticker(o.symbol))}</b></td><td>${o.side}</td><td>${o.type}${o.oco ? " (bracket)" : ""}</td><td>${fmtPrice(o.price)}</td><td>${fmtNum(o.qty, 4)}</td><td><button class="btn small" data-cancel="${o.id}">Cancel</button></td></tr>`).join("") || '<tr><td colspan="6" class="l muted">None.</td></tr>'}</tbody></table>
+      <h4>Working orders</h4><table class="t"><thead><tr><th>Symbol</th><th>Side</th><th>Type</th><th>Price</th><th>Qty</th><th></th></tr></thead><tbody>${p.orders.map((o) => `<tr><td><b>${esc(ticker(o.symbol))}</b></td><td>${esc(o.side)}</td><td>${esc(o.type)}${o.oco ? " (bracket)" : ""}</td><td>${fmtPrice(o.price)}</td><td>${fmtNum(o.qty, 4)}</td><td><button class="btn small" data-cancel="${esc(o.id)}">Cancel</button></td></tr>`).join("") || '<tr><td colspan="6" class="l muted">None.</td></tr>'}</tbody></table>
       <h4>History</h4><table class="t"><thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Price</th><th>Realised</th></tr></thead><tbody>${p.history
         .slice(0, 100)
         .map(
           (h) =>
-            `<tr><td>${new Date(h.time).toLocaleString()}</td><td>${esc(ticker(h.symbol))}</td><td>${h.side}</td><td>${fmtNum(h.qty, 4)}</td><td>${fmtPrice(h.price)}</td><td class="${h.realized >= 0 ? "up" : "down"}">${h.realized ? fmtPrice(h.realized) : ""}</td></tr>`,
+            `<tr><td>${new Date(h.time).toLocaleString()}</td><td>${esc(ticker(h.symbol))}</td><td>${esc(h.side)}</td><td>${fmtNum(h.qty, 4)}</td><td>${fmtPrice(h.price)}</td><td class="${h.realized >= 0 ? "up" : "down"}">${h.realized ? fmtPrice(h.realized) : ""}</td></tr>`,
         )
         .join("")}</tbody></table>
     </div></div>`;
