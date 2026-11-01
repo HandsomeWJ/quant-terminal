@@ -4,6 +4,10 @@
 // Run it while the app is stopped (or refresh the browser tab afterwards).
 import { resolve, getCandles } from '../lib/providers.js';
 import * as store from '../lib/store.js';
+import { relaunchForProxy } from '../lib/proxy.js';
+
+const relaunched = relaunchForProxy();
+if (relaunched) process.exit(await relaunched);
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, all) => {
   if (a.startsWith('--')) acc.push([a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true']);

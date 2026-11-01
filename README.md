@@ -24,7 +24,17 @@ npm start
 
 There's no `npm install` step. Next time, double-click `start.command` (Mac), `start.bat` (Windows) or run `./start.sh` (Linux).
 
-**Update.** Paste the setup prompt again, or by hand: stop it with `node scripts/stop.js`, download `main.zip` again and copy its files over your `quant-terminal` folder. The download has no `data` folder, so your watchlists, drawings, alerts and paper account stay as they are.
+**Update.** Paste the setup prompt again, in the same folder as the first time. By hand, from the folder that holds `quant-terminal` (macOS, Linux or Git Bash):
+
+```bash
+node quant-terminal/scripts/stop.js
+```
+
+```bash
+curl -fsSL -o quant-terminal.tar.gz https://github.com/HandsomeWJ/quant-terminal/archive/refs/heads/main.tar.gz && tar -xzf quant-terminal.tar.gz --strip-components=1 -C quant-terminal && rm quant-terminal.tar.gz
+```
+
+The download has no `data` folder, so your watchlists, drawings, alerts and paper account stay as they are, and so do your own indicators in `custom` (the bundled example, `ema-ribbon-squeeze.js`, is reset). Don't drag a new download over the old folder in Finder or Explorer: replacing a folder deletes everything in it, including `data`.
 
 ## What's in it
 
