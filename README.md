@@ -24,6 +24,8 @@ npm start
 
 There's no `npm install` step. Next time, double-click `start.command` (Mac), `start.bat` (Windows) or run `./start.sh` (Linux).
 
+**Mac app (optional).** `macos/build.sh` builds `Quant Terminal.app` into `~/Applications`: this app in a window of its own, with a Dock icon. It uses the server already running from this folder, or starts it. Closing the window keeps it in the Dock so desktop alerts keep coming; quitting leaves the server running so webhook alerts still fire, and Quant Terminal > Stop Server and Quit stops both. It needs Xcode's command line tools (`xcode-select --install`). The first time it starts the server, and again after each rebuild, macOS may ask to let it open this folder. `macos/selftest.sh` checks a test copy of it from end to end.
+
 **Update.** Paste the setup prompt again, in the same folder as the first time. By hand, from the folder that holds `quant-terminal` (macOS, Linux or Git Bash):
 
 ```bash
